@@ -10,7 +10,9 @@ if !has("python3")
   endif
 endif
 
-function! Ici(word)
+function! Ici(args)
+    let l:word = empty(a:args) ? expand("<cword>") : a:args
+
   exec s:python_until_eof
 import vim
 try:
@@ -19,7 +21,6 @@ except ImportError:
     from urllib2 import urlopen
 from xml.dom import minidom
 
-WORD = vim.eval("a:word")
 KEY = 'E0F0D336AF47D3797C68372A869BDBC5'
 URL = 'http://dict-co.iciba.com/api/dictionary.php'
 
@@ -56,21 +57,9 @@ def show(node):
             show(e)
 
 
-def main():
-    root = read_xml(get_response(WORD))
-    show(root)
-
-if __name__ == '__main__':
-    main()
+show(read_xml(get_response(vim.eval("l:word"))))
 EOF
 endfunction
 
-
-function! IciFrom()
-let word = expand("<cword>")
-call Ici(word)
-endfunction
-
-
-command! -nargs=1 Ici :call Ici(<q-args>)
-command! -nargs=0 IciFrom :call IciFrom()
+command! -nargs=* Ici     :call Ici(<q-args>)
+command! -nargs=0 IciFrom :call Ici(<q-args>)
