@@ -15,49 +15,50 @@ function! Ici(args)
 
   exec s:python_until_eof
 import vim
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
-from xml.dom import minidom
+import requests
 
 KEY = 'E0F0D336AF47D3797C68372A869BDBC5'
 URL = 'http://dict-co.iciba.com/api/dictionary.php'
 
+def get_response(word: str):
+    return requests.get(url=URL, params={'type': 'json', 'key': KEY, 'w': word.lower()}).json()
 
-def get_response(word):
-    return urlopen(URL + '?key=' + KEY + '&w=' + word)
+def show(res: dict):
+    if 'word_name' not in res:
+        return
 
+    print('---------------------------------------')
+    print("{}".format(res.get('word_name')))
+    for symbol in res.get('symbols'):
+        print('---------------------------------------')
+        if 'word_symbol' in symbol:
+            print('[{}]'.format(symbol.get('word_symbol')))
+            for part in symbol.get('parts'):
+                if 'means' not in part:
+                    continue
 
-def read_xml(xml):
-    dom = minidom.parse(xml)
-    return dom.documentElement
+                if not part.get('part_name'):
+                    for i in part.get('means'):
+                        print('    {}'.format(i.get('word_mean')))
+                else:
+                    print('    {} {}'.format(
+                        part.get('part_name'),
+                        '; '.join(p['word_mean'] for p in part.get('means'))))
 
+        else:
+            print('US:[{}] UK:[{}]'.format(
+                symbol.get('ph_am'),
+                symbol.get('ph_en'),
+            ))
+            for part in symbol.get('parts'):
+                print('    {} {}'.format(
+                    part.get('part'),
+                    '; '.join(part.get('means')),
+                ))
+    print('---------------------------------------')
+    print()
 
-def show(node):
-    if not node.hasChildNodes():
-        if node.nodeType == node.TEXT_NODE and node.data != '\n':
-            tag_name = node.parentNode.tagName
-            content = node.data.replace('\n', '')
-            if tag_name == 'ps':
-                print(content)
-                print('---------------------------')
-            elif tag_name == 'orig':
-                print(content)
-            elif tag_name == 'trans':
-                print(content)
-                print('---------------------------')
-            elif tag_name == 'pos':
-                print(content)
-            elif tag_name == 'acceptation':
-                print(content)
-                print('---------------------------')
-    else:
-        for e in node.childNodes:
-            show(e)
-
-
-show(read_xml(get_response(vim.eval("l:word"))))
+show(get_response(vim.eval("l:word")))
 EOF
 endfunction
 
